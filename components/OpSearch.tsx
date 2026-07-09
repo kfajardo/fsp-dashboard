@@ -190,6 +190,23 @@ const PARTNER_TYPES: Record<string, string> = {
   FSP: "Full Service Partner",
 };
 
+// Mock property lines for the pay modal — enough rows to exercise the
+// scrollable table; first entry is the reference capture's well.
+const PROPERTY_WELLS = [
+  ["L-10024A", "QUARRY CHIGWELL2 14-18-41-24"],
+  ["L-10025A", "QUARRY CHIGWELL2 15-18-41-24"],
+  ["L-10026B", "QUARRY CHIGWELL2 16-18-41-24"],
+  ["L-10027A", "BANNOCK CREEK 03-22-41-24"],
+  ["L-10028C", "BANNOCK CREEK 04-22-41-24"],
+  ["L-10029A", "HALFWAY COULEE 07-30-42-25"],
+  ["L-10030B", "HALFWAY COULEE 08-30-42-25"],
+  ["L-10031A", "STETTLER EAST 01-14-38-19"],
+  ["L-10032A", "STETTLER EAST 02-14-38-19"],
+  ["L-10033D", "FERRYBANK 11-05-44-27"],
+  ["L-10034A", "FERRYBANK 12-05-44-27"],
+  ["L-10035B", "WILLESDEN GREEN 06-09-42-07"],
+] as const;
+
 // Each party's payment readiness (sessionStorage-backed; empty on a fresh
 // state / after global reset). Read via state, not in render — the React
 // Compiler memoizes render-scope reads, so they'd go stale after the
@@ -230,6 +247,15 @@ export function PayModal({
   const fmt = (n: number) =>
     n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const total = fmt(invoiceAmount + fee);
+
+  // ponytail: mock per-property split — equal cent shares with the remainder
+  // on the last row, so the lines always sum exactly to the invoice
+  const totalCents = Math.round(invoiceAmount * 100);
+  const perCents = Math.floor(totalCents / PROPERTY_WELLS.length);
+  const rowCents = (i: number) =>
+    i === PROPERTY_WELLS.length - 1
+      ? totalCents - perCents * (PROPERTY_WELLS.length - 1)
+      : perCents;
 
   const pay = () => {
     setPhase("paying");
@@ -313,7 +339,7 @@ export function PayModal({
           </div>
 
           <div className="mt-4 rounded-t-lg bg-bg-tertiary p-2 text-center">
-            Properties 1 - 1
+            Properties 1 - {PROPERTY_WELLS.length}
           </div>
           {/* Rows scroll past ~6 entries; the sticky header stays put.
               border-separate (not collapse) so the th borders stick too. */}
@@ -335,19 +361,20 @@ export function PayModal({
               </tr>
             </thead>
             <tbody>
-              {/* ponytail: single mock line item from the reference capture — real breakdown comes from the API */}
-              <tr>
-                <td className="border-b border-border-tertiary p-1.25">
-                  <a href="#">L-10024A</a>
-                </td>
-                <td className="border-b border-border-tertiary p-1.25" />
-                <td className="border-b border-border-tertiary p-1.25">
-                  QUARRY CHIGWELL2 14-18-41-24
-                </td>
-                <td className="border-b border-border-tertiary p-1.25 text-right">
-                  <a href="#">{amount}</a>
-                </td>
-              </tr>
+              {PROPERTY_WELLS.map(([costCenter, description], i) => (
+                <tr key={costCenter}>
+                  <td className="border-b border-border-tertiary p-1.25">
+                    <a href="#">{costCenter}</a>
+                  </td>
+                  <td className="border-b border-border-tertiary p-1.25" />
+                  <td className="border-b border-border-tertiary p-1.25">
+                    {description}
+                  </td>
+                  <td className="border-b border-border-tertiary p-1.25 text-right">
+                    <a href="#">{fmt(rowCents(i) / 100)}</a>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
           </div>
@@ -947,15 +974,19 @@ export function ManualBankForm({
   onAdd,
   submitLabel = "Submit",
   submitDisabled = false,
+  initial,
   children,
 }: {
   onAdd: (name: string, accountNumber: string) => void;
   submitLabel?: string;
   submitDisabled?: boolean;
+  // seed values (demo Auto fill) — read once on mount, so pair a change
+  // with a key change to remount, like the onboarding drawer sections
+  initial?: typeof EMPTY_MANUAL;
   // rendered between the fields and the submit button (e.g. a T&C checkbox)
   children?: ReactNode;
 }) {
-  const [form, setForm] = useState(EMPTY_MANUAL);
+  const [form, setForm] = useState(initial ?? EMPTY_MANUAL);
   const [errors, setErrors] = useState<Partial<typeof EMPTY_MANUAL>>({});
   const [saving, setSaving] = useState(false);
 

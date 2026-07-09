@@ -212,7 +212,8 @@ const TWO_COL = "grid grid-cols-1 gap-4 sm:grid-cols-2";
 // (officer/owner addresses intentionally differ from the business address)
 // ---------------------------------------------------------------------------
 
-const DEMO = {
+// Exported for the partial-onboarding drawer's Auto fill (OperatedBA).
+export const DEMO = {
   business: {
     legalBusinessName: "Acme Oil & Gas, LLC",
     doingBusinessAs: "Acme Energy",
@@ -304,22 +305,33 @@ function useSectionForm<T extends Record<string, string>>(
 // Section: Business Information
 // ---------------------------------------------------------------------------
 
+// Business details a WIO captured while partially onboarding the operator —
+// the operator's own full onboarding starts from these instead of blank.
+function loadPartialBusiness(): Record<string, string> | null {
+  try {
+    return JSON.parse(sessionStorage.getItem("operator-partial-business")!);
+  } catch {
+    return null;
+  }
+}
+
 // Also reused by the WIO's partial operator onboarding (OperatedBA), which
 // replaces the checkbox with agree-by-continuing wording at its own submit —
-// hideTos drops the Terms of Service block and its Save gating.
+// hideTos drops the Terms of Service block and its Save gating. onSaved
+// receives the whole form so the partial flow can persist it for later.
 export function BusinessSection({
   prefilled,
   onSaved,
   hideTos = false,
 }: {
   prefilled: boolean;
-  onSaved: (address: BusinessAddress) => void;
+  onSaved: (address: BusinessAddress, form: Record<string, string>) => void;
   hideTos?: boolean;
 }) {
   const { form, errors, setErrors, update, blur } = useSectionForm(
     prefilled
       ? { ...DEMO.business }
-      : {
+      : loadPartialBusiness() ?? {
           legalBusinessName: "",
           doingBusinessAs: "",
           ein: "",
@@ -346,12 +358,15 @@ export function BusinessSection({
       setErrors(errs);
       return;
     }
-    onSaved({
-      addressLine1: form.addressLine1,
-      city: form.city,
-      state: form.state,
-      zipCode: form.zipCode,
-    });
+    onSaved(
+      {
+        addressLine1: form.addressLine1,
+        city: form.city,
+        state: form.state,
+        zipCode: form.zipCode,
+      },
+      form,
+    );
   };
 
   return (
@@ -1532,6 +1547,7 @@ export default function OnboardingDrawer({
   hideTrigger,
   showReset,
   onComplete,
+  triggerLabel = "Onboard",
 }: {
   wioCode?: string;
   // Which profile's own onboarding this is — the WIO's and the operator's
@@ -1546,6 +1562,8 @@ export default function OnboardingDrawer({
   showReset?: boolean;
   // Fires when onboarding finishes, for parents that gate UI on the flag.
   onComplete?: () => void;
+  // Trigger button text — "Complete Onboarding" when a WIO already did a partial.
+  triggerLabel?: string;
 }) {
   // Per-WIO pages namespace their onboarded state by code; a profile's own
   // onboarding (no wioCode) uses that profile's key.
@@ -1672,7 +1690,7 @@ export default function OnboardingDrawer({
             variant="primary"
             size="md"
             onClick={() => setIsOpen(true)}>
-            Onboard
+            {triggerLabel}
           </Button>
         ))}
 

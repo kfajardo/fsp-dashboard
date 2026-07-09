@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/Button";
-import OnboardingDrawer, { BusinessSection } from "@/components/OnboardingDrawer";
+import OnboardingDrawer, { BusinessSection, DEMO } from "@/components/OnboardingDrawer";
 import { BankAccountsTab, ManualBankForm, loadBanks } from "@/components/OpSearch";
 import {
   getPartner,
@@ -15,6 +15,14 @@ import type { UserType } from "@/components/userType";
 
 // ponytail: the demo's WIO login is hardcoded page chrome (loginAs="ZTEST-DD")
 const WIO_NAME = "ZTEST - ZTEST-DD";
+
+// Demo bank details for the partial-onboarding Auto fill — matches the
+// onboarding drawer's Acme demo data; routing passes the ABA checksum.
+const DEMO_BANK = {
+  name: "Acme Operating Account",
+  account: "123456789012",
+  routing: "021000021",
+};
 
 function Row({
   label,
@@ -66,6 +74,9 @@ export function OperatorOnboardDrawer({
   const [open, setOpen] = useState(false);
   const [bizDone, setBizDone] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
+  // What the WIO entered in Business Information — persisted on Continue so
+  // the operator's own full onboarding starts from it
+  const [bizForm, setBizForm] = useState<Record<string, string> | null>(null);
 
   const complete = (name: string, account: string) => {
     // Same store the operator's own banking tab reads — both parties see it
@@ -73,6 +84,8 @@ export function OperatorOnboardDrawer({
     state.rows.push([name, "Checking", `••••${account.slice(-4)}`, "Unverified"]);
     sessionStorage.setItem("banks:operator", JSON.stringify(state));
     sessionStorage.setItem("operator-onboarded-by", WIO_NAME);
+    if (bizForm)
+      sessionStorage.setItem("operator-partial-business", JSON.stringify(bizForm));
     setOpen(false);
     onDone();
   };
@@ -109,6 +122,7 @@ export function OperatorOnboardDrawer({
                   onClick={() => {
                     setPrefilled(true);
                     setBizDone(true);
+                    setBizForm({ ...DEMO.business });
                   }}>
                   Auto fill
                 </Button>
@@ -148,7 +162,10 @@ export function OperatorOnboardDrawer({
                     <BusinessSection
                       prefilled={prefilled}
                       hideTos
-                      onSaved={() => setBizDone(true)}
+                      onSaved={(_, form) => {
+                        setBizForm(form);
+                        setBizDone(true);
+                      }}
                     />
                   </div>
                 )}
@@ -158,6 +175,9 @@ export function OperatorOnboardDrawer({
                 Bank Account
               </h3>
               <ManualBankForm
+                // remounts on Auto fill so the demo values are picked up
+                key={prefilled ? "prefilled" : "blank"}
+                initial={prefilled ? DEMO_BANK : undefined}
                 submitLabel="Continue"
                 submitDisabled={!bizDone}
                 onAdd={complete}>
@@ -247,6 +267,8 @@ export default function OperatedBA({
           <OnboardingDrawer
             storageKey="operator-onboarding-complete"
             onComplete={() => setOpSelfOnboarded(true)}
+            // A WIO partial exists: finishing it is the operator's job
+            triggerLabel={onboardedBy ? "Complete Onboarding" : "Onboard"}
           />
         )}
       </div>
