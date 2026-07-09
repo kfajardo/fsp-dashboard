@@ -266,6 +266,7 @@ export default function OperatedBA({
         {operatorView && userType === "operator" && (
           <OnboardingDrawer
             storageKey="operator-onboarding-complete"
+            title="Operator Onboarding"
             onComplete={() => setOpSelfOnboarded(true)}
             // A WIO partial exists: finishing it is the operator's job
             triggerLabel={onboardedBy ? "Complete Onboarding" : "Onboard"}

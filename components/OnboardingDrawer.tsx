@@ -1548,6 +1548,7 @@ export default function OnboardingDrawer({
   showReset,
   onComplete,
   triggerLabel = "Onboard",
+  title = "WIO Onboarding",
 }: {
   wioCode?: string;
   // Which profile's own onboarding this is — the WIO's and the operator's
@@ -1564,6 +1565,8 @@ export default function OnboardingDrawer({
   onComplete?: () => void;
   // Trigger button text — "Complete Onboarding" when a WIO already did a partial.
   triggerLabel?: string;
+  // Drawer heading — "Operator Onboarding" when it's the operator onboarding.
+  title?: string;
 }) {
   // Per-WIO pages namespace their onboarded state by code; a profile's own
   // onboarding (no wioCode) uses that profile's key.
@@ -1704,7 +1707,7 @@ export default function OnboardingDrawer({
             <header className="flex items-center justify-between border-b border-border-tertiary px-5 py-3.5">
               <div>
                 <h2 className="text-[19px] font-bold text-text-emphasis">
-                  WIO Onboarding
+                  {title}
                 </h2>
                 <p className="text-[12px] text-text-secondary">
                   {doneCount} of {SECTIONS.length} sections complete

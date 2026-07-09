@@ -168,7 +168,11 @@ export default async function Home() {
             </div>
             <div className="flex min-w-105 flex-1 flex-col gap-2.5">
               <div className="flex justify-end">
-                <OnboardingDrawer showReset storageKey="operator-onboarding-complete" />
+                <OnboardingDrawer
+                  showReset
+                  storageKey="operator-onboarding-complete"
+                  title="Operator Onboarding"
+                />
               </div>
               <EduCenter />
             </div>
