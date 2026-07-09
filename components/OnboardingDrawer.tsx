@@ -304,12 +304,17 @@ function useSectionForm<T extends Record<string, string>>(
 // Section: Business Information
 // ---------------------------------------------------------------------------
 
-function BusinessSection({
+// Also reused by the WIO's partial operator onboarding (OperatedBA), which
+// replaces the checkbox with agree-by-continuing wording at its own submit —
+// hideTos drops the Terms of Service block and its Save gating.
+export function BusinessSection({
   prefilled,
   onSaved,
+  hideTos = false,
 }: {
   prefilled: boolean;
   onSaved: (address: BusinessAddress) => void;
+  hideTos?: boolean;
 }) {
   const { form, errors, setErrors, update, blur } = useSectionForm(
     prefilled
@@ -333,7 +338,7 @@ function BusinessSection({
         },
     businessSchema,
   );
-  const [tosChecked, setTosChecked] = useState(prefilled);
+  const [tosChecked, setTosChecked] = useState(prefilled || hideTos);
 
   const handleSave = () => {
     const errs = validateFormRules(businessSchema, form);
@@ -538,22 +543,24 @@ function BusinessSection({
         </Field>
       </div>
 
-      <div>
-        <p className="mb-1 text-[14px] font-medium text-text-emphasis">
-          Terms of Service <span className="text-callout">*</span>
-        </p>
-        <label className="flex cursor-pointer items-center gap-2 select-none">
-          <input
-            type="checkbox"
-            checked={tosChecked}
-            onChange={(e) => setTosChecked(e.target.checked)}
-            className="h-4 w-4 shrink-0 cursor-pointer accent-brand"
-          />
-          <span className="text-[13px] text-text-primary">
-            I have read and accept the Terms of Service
-          </span>
-        </label>
-      </div>
+      {!hideTos && (
+        <div>
+          <p className="mb-1 text-[14px] font-medium text-text-emphasis">
+            Terms of Service <span className="text-callout">*</span>
+          </p>
+          <label className="flex cursor-pointer items-center gap-2 select-none">
+            <input
+              type="checkbox"
+              checked={tosChecked}
+              onChange={(e) => setTosChecked(e.target.checked)}
+              className="h-4 w-4 shrink-0 cursor-pointer accent-brand"
+            />
+            <span className="text-[13px] text-text-primary">
+              I have read and accept the Terms of Service
+            </span>
+          </label>
+        </div>
+      )}
 
       <div className="flex justify-end">
         <Button
@@ -1524,6 +1531,7 @@ export default function OnboardingDrawer({
   onOpenChange,
   hideTrigger,
   showReset,
+  onComplete,
 }: {
   wioCode?: string;
   // Which profile's own onboarding this is — the WIO's and the operator's
@@ -1536,6 +1544,8 @@ export default function OnboardingDrawer({
   hideTrigger?: boolean;
   // Show the floating "Reset onboarding" overlay — Operator Dashboard only.
   showReset?: boolean;
+  // Fires when onboarding finishes, for parents that gate UI on the flag.
+  onComplete?: () => void;
 }) {
   // Per-WIO pages namespace their onboarded state by code; a profile's own
   // onboarding (no wioCode) uses that profile's key.
@@ -1589,6 +1599,7 @@ export default function OnboardingDrawer({
       setSubmitting(false);
       setIsOpen(false);
       setShowToast(true);
+      onComplete?.();
     }, 3000);
   };
 

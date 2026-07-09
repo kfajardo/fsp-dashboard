@@ -2,6 +2,9 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import Button from "@/components/Button";
+// benign cycle: OperatedBA imports back from this module, but both sides only
+// reference each other at render time, never during module init
+import { OperatorOnboardDrawer } from "@/components/OperatedBA";
 import Spinner from "@/components/Spinner";
 import { SHARED_INVOICE } from "@/components/invoices";
 
@@ -187,6 +190,18 @@ const PARTNER_TYPES: Record<string, string> = {
   FSP: "Full Service Partner",
 };
 
+// Each party's payment readiness (sessionStorage-backed; empty on a fresh
+// state / after global reset). Read via state, not in render — the React
+// Compiler memoizes render-scope reads, so they'd go stale after the
+// in-modal onboarding CTA writes new data.
+const readParties = () => ({
+  wio: loadBanks("wio"),
+  op: loadBanks("operator"),
+  opOnboarded:
+    sessionStorage.getItem("operator-onboarding-complete") === "true" ||
+    sessionStorage.getItem("operator-onboarded-by") != null,
+});
+
 export function PayModal({
   row,
   onClose,
@@ -198,15 +213,16 @@ export function PayModal({
 }) {
   const [partner, ptype, myBa, invoice, , acctMonth, , status, amount] = row;
   const [phase, setPhase] = useState<"review" | "paying" | "done">("review");
+  // lazy init is safe — the modal only ever mounts client-side, on click
+  const [parties, setParties] = useState(readParties);
+  // second in-modal page: the WIO's own bank CRUD, so fixing a missing bank
+  // doesn't lose the payment context; Back re-reads the qualifications
+  const [screen, setScreen] = useState<"pay" | "banks">("pay");
 
-  // Each party's actual linked accounts (sessionStorage-backed; empty on a
-  // fresh state / after global reset). Safe to read in render — the modal
-  // only ever mounts client-side, on click.
-  const wioBanks = loadBanks("wio");
-  const wioDefault = wioBanks.rows[wioBanks.defaultIndex];
-  const opBanks = loadBanks("operator");
+  const wioDefault = parties.wio.rows[parties.wio.defaultIndex];
   const wioHasBank = wioDefault != null;
-  const operatorHasBank = opBanks.rows[opBanks.defaultIndex] != null;
+  const operatorHasBank = parties.op.rows[parties.op.defaultIndex] != null;
+  const opOnboarded = parties.opOnboarded;
 
   const invoiceAmount = Number(amount.replace(/,/g, ""));
   // fee = min($500, max($5, invoice × 1%)); total payment = invoice + fee
@@ -229,7 +245,9 @@ export function PayModal({
       <div className="flex max-h-[90vh] w-full max-w-175 flex-col overflow-hidden rounded-sm bg-bg-primary text-[14px] text-text-primary shadow-2xl">
         <div className="flex items-center justify-between border-b border-border-secondary px-3.75 py-2.5">
           <span className="font-bold">
-            Operated JIB Invoice {invoice} - {acctMonth}
+            {screen === "banks"
+              ? "My Bank Accounts"
+              : `Operated JIB Invoice ${invoice} - ${acctMonth}`}
           </span>
           <button
             type="button"
@@ -241,6 +259,8 @@ export function PayModal({
           </button>
         </div>
 
+        {screen === "pay" ? (
+          <>
         <div className="overflow-y-auto p-3.75">
           <div className="flex justify-between gap-4">
             <div className="space-y-1">
@@ -295,18 +315,21 @@ export function PayModal({
           <div className="mt-4 rounded-t-lg bg-bg-tertiary p-2 text-center">
             Properties 1 - 1
           </div>
-          <table className="w-full border-collapse">
+          {/* Rows scroll past ~6 entries; the sticky header stays put.
+              border-separate (not collapse) so the th borders stick too. */}
+          <div className="max-h-55 overflow-y-auto">
+          <table className="w-full border-separate border-spacing-0">
             <thead>
               <tr>
                 {["Cost Center", "AFE", "Description"].map((h) => (
                   <th
                     key={h}
-                    className="border-b border-border-tertiary p-1.25 text-left font-normal"
+                    className="sticky top-0 z-10 border-b border-border-tertiary bg-bg-primary p-1.25 text-left font-normal"
                   >
                     <a href="#">{h}</a>
                   </th>
                 ))}
-                <th className="border-b border-border-tertiary p-1.25 text-right font-normal">
+                <th className="sticky top-0 z-10 border-b border-border-tertiary bg-bg-primary p-1.25 text-right font-normal">
                   Original
                 </th>
               </tr>
@@ -327,6 +350,7 @@ export function PayModal({
               </tr>
             </tbody>
           </table>
+          </div>
         </div>
 
         <div className="border-t border-border-secondary p-3.75">
@@ -335,14 +359,47 @@ export function PayModal({
               {!wioHasBank && (
                 <div>
                   <i className="fas fa-exclamation-circle mr-1.5" />
-                  You need your own default bank account to pay this invoice.
+                  You need your own default bank account to pay this invoice.{" "}
+                  <button
+                    type="button"
+                    onClick={() => setScreen("banks")}
+                    className="cursor-pointer font-bold text-[#a94442] underline"
+                  >
+                    Add a bank account
+                  </button>
                 </div>
               )}
               {!operatorHasBank && (
                 <div>
                   <i className="fas fa-exclamation-circle mr-1.5" />
                   This operator does not have a default bank account to receive your
-                  payment.
+                  payment.{" "}
+                  {opOnboarded ? (
+                    // onboarded, just bankless — send the WIO to the operator's bank CRUD
+                    <a
+                      href="/Core/Fsp/Operator#banks"
+                      className="font-bold text-[#a94442] underline"
+                    >
+                      Add their bank account
+                    </a>
+                  ) : (
+                    // not onboarded — partial onboarding right here (T&C + manual
+                    // bank, auto-default); onDone re-reads the banks above
+                    <OperatorOnboardDrawer
+                      // ponytail: the demo's only operator, hardcoded like elsewhere
+                      operatorName="ZTEST - ZTEST-I"
+                      onDone={() => setParties(readParties())}
+                      renderTrigger={(open) => (
+                        <button
+                          type="button"
+                          onClick={open}
+                          className="cursor-pointer font-bold text-[#a94442] underline"
+                        >
+                          Onboard this operator
+                        </button>
+                      )}
+                    />
+                  )}
                 </div>
               )}
             </div>
@@ -398,6 +455,28 @@ export function PayModal({
             )}
           </div>
         </div>
+          </>
+        ) : (
+          <>
+            <div className="overflow-y-auto px-3.75">
+              {/* The WIO's own accounts — Plaid allowed, it's their own list */}
+              <BankAccountsTab profile="wio" />
+            </div>
+            <div className="border-t border-border-secondary p-3.75">
+              <Button
+                variant="default"
+                size="md"
+                onClick={() => {
+                  setParties(readParties());
+                  setScreen("pay");
+                }}
+              >
+                <i className="far fa-angle-left mr-2 text-[15px]" />
+                Back
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -864,7 +943,18 @@ const MANUAL_FIELDS = [
 
 const EMPTY_MANUAL = { name: "", account: "", routing: "" };
 
-function ManualBankForm({ onAdd }: { onAdd: (name: string, accountNumber: string) => void }) {
+export function ManualBankForm({
+  onAdd,
+  submitLabel = "Submit",
+  submitDisabled = false,
+  children,
+}: {
+  onAdd: (name: string, accountNumber: string) => void;
+  submitLabel?: string;
+  submitDisabled?: boolean;
+  // rendered between the fields and the submit button (e.g. a T&C checkbox)
+  children?: ReactNode;
+}) {
   const [form, setForm] = useState(EMPTY_MANUAL);
   const [errors, setErrors] = useState<Partial<typeof EMPTY_MANUAL>>({});
   const [saving, setSaving] = useState(false);
@@ -924,8 +1014,9 @@ function ManualBankForm({ onAdd }: { onAdd: (name: string, accountNumber: string
               {errors[key] && <p className="mt-1 text-[12px] text-callout">{errors[key]}</p>}
             </div>
           ))}
-          <Button variant="primary" size="md" onClick={submit}>
-            Submit
+          {children}
+          <Button variant="primary" size="md" disabled={submitDisabled} onClick={submit}>
+            {submitLabel}
           </Button>
         </div>
       </fieldset>
@@ -939,7 +1030,15 @@ function ManualBankForm({ onAdd }: { onAdd: (name: string, accountNumber: string
 }
 
 // ponytail: dumb mock — nothing touches a server; timers fake the Plaid handoff
-export function BankAccountsTab({ profile }: { profile: "operator" | "wio" }) {
+// allowPlaid=false (WIO viewing the operator's accounts) skips the options grid:
+// Add Bank goes straight to the manual form, so Plaid linking stays operator-only.
+export function BankAccountsTab({
+  profile,
+  allowPlaid = true,
+}: {
+  profile: "operator" | "wio";
+  allowPlaid?: boolean;
+}) {
   const [adding, setAdding] = useState<false | "options" | "manual">(false);
   const [{ rows: banks, defaultIndex }, setState] = useState<BankState>({
     rows: [],
@@ -1011,7 +1110,11 @@ export function BankAccountsTab({ profile }: { profile: "operator" | "wio" }) {
   return (
     <div className="pt-4">
       <div className="mb-2.5 flex items-center justify-between">
-        <Button variant={adding ? "default" : "primary"} size="md" onClick={() => setAdding((v) => (v ? false : "options"))}>
+        <Button
+          variant={adding ? "default" : "primary"}
+          size="md"
+          onClick={() => setAdding((v) => (v ? false : allowPlaid ? "options" : "manual"))}
+        >
           {adding ? (
             "Cancel"
           ) : (

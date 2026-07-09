@@ -322,7 +322,12 @@ function InvoiceCheckTab() {
                     {docType}
                   </td>
                   <td className="border-b border-border-tertiary p-1.25 align-top">
-                    <a href="#">{operator}</a>
+                    {/* display forms "!ZTEST - ZTEST-I" / "!ZTEST-I" both resolve to code ZTEST-I */}
+                    <a
+                      href={`/Core/Fsp/Operator?operator=${encodeURIComponent(operator.split(" - ").pop()!.replace("!", ""))}`}
+                    >
+                      {operator}
+                    </a>
                   </td>
                   <td className="border-b border-border-tertiary p-1.25 align-top">
                     <div>!No Xref</div>
