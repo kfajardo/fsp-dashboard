@@ -1,65 +1,188 @@
-import Image from "next/image";
+import Button from "@/components/Button";
+import DashboardSection from "@/components/DashboardSection";
+import OnboardingDrawer from "@/components/OnboardingDrawer";
+import DebugBar from "@/components/DebugBar";
+import EduCenter from "@/components/EduCenter";
+import MainMenu from "@/components/MainMenu";
+import NewsList from "@/components/NewsList";
+import SiteHeader from "@/components/SiteHeader";
+import StatTile from "@/components/StatTile";
+import SupportContacts from "@/components/SupportContacts";
+import { getUserType } from "@/components/userType";
 
-export default function Home() {
+const news = [
+  {
+    text: 'Enverus Blog "A weekly update on the latest insight of the energy industry".',
+    action: "Read",
+  },
+  {
+    text: "Get Ahead With the 2025 Mineral and Royalty Market Outlook Webinar!",
+    action: "Watch",
+  },
+  {
+    text: "Register for webinars on Enverus Upcoming Event calendar.",
+    action: "Register",
+  },
+  {
+    text: "Explore solutions for mineral investment and management",
+    action: "Explore",
+  },
+];
+
+export default async function Home() {
+  const userType = await getUserType();
+
+  // ZTEST-DD (WIO) dashboard — logged in as ZTEST-DD "via ZTESTAGENT".
+  // Mirrors GET /api/Dashboard/GetFspItemsToAddress: NON-OPERATING STATS only.
+  if (userType === "wio") {
+    const nonOpSearch = (type: string, countType: "Group" | "Me") =>
+      `/Core/Fsp/NonOpSearch?tab=invoices&itemToAddressType=${type}&countType=${countType}`;
+    return (
+      <>
+        <DebugBar />
+        <SiteHeader userType={userType} loginAs="ZTEST-DD" />
+        <MainMenu userType={userType} ownerView />
+        <main className="flex flex-auto flex-col px-2.5 pt-2.5 lg:px-5">
+          <div className="mx-auto w-full max-w-300">
+            <div className="flex items-center justify-between">
+              <h1 className="mt-3.75 mb-6.25 text-[24px] font-bold text-text-primary">
+                Dashboard
+              </h1>
+              <Button variant="tertiary" size="sm" href="#">
+                <i className="fe fe-building-list mr-2 text-[18px]" />
+                Operator Lists
+              </Button>
+            </div>
+
+            <DashboardSection
+              icon="fe-buildings"
+              title="NON-OPERATING STATS"
+              headerClassName="mb-2.5"
+              contentClassName="mb-6"
+            >
+              {/* ponytail: fe-laptop-gear (real icon) absent from the subsetted
+                  font — fe-file-search reads closest for invoices */}
+              <StatTile
+                title="Non-Op Invoices to Process"
+                icon="fe-file-search"
+                count={17}
+                href={nonOpSearch("NonOpInvoicesToProcess", "Group")}
+                meCount={17}
+                meHref={nonOpSearch("NonOpInvoicesToProcess", "Me")}
+              />
+              <StatTile
+                title="Non-Op Payments to Process"
+                icon="fe-money-bill-gear"
+                count={32}
+                href={nonOpSearch("NonOpPaymentsToProcess", "Group")}
+                meCount={32}
+                meHref={nonOpSearch("NonOpPaymentsToProcess", "Me")}
+              />
+            </DashboardSection>
+
+            <div className="mb-6 flex flex-wrap gap-x-10.5 gap-y-6">
+              <div className="flex min-w-105 flex-1 flex-col">
+                <DashboardSection
+                  icon="fe-megaphone"
+                  title={<>ENVERUS NEWS &amp; EVENTS</>}
+                  contentClassName="h-full"
+                >
+                  <NewsList items={news} />
+                </DashboardSection>
+              </div>
+              <div className="flex min-w-105 flex-1 flex-col gap-2.5">
+                <div className="flex">
+                  <OnboardingDrawer />
+                </div>
+                <EduCenter />
+              </div>
+            </div>
+
+            <DashboardSection
+              icon="fe-comment-question"
+              title="ENERGYLINK CLIENT SUPPORT"
+              contentClassName="mb-6"
+            >
+              <SupportContacts />
+            </DashboardSection>
+          </div>
+        </main>
+      </>
+    );
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <>
+      <DebugBar />
+      <SiteHeader userType={userType} />
+      <MainMenu userType={userType} />
+      <main className="flex flex-auto flex-col px-2.5 pt-2.5 lg:px-5">
+        <div className="mx-auto w-full max-w-300">
+          <div className="flex items-center justify-between">
+            <h1 className="mt-3.75 mb-6.25 text-[24px] font-bold text-text-primary">
+              Dashboard
+            </h1>
+            <Button variant="tertiary" size="sm" href="#">
+              <i className="fe fe-building-list mr-2 text-[18px]" />
+              Operator Lists
+            </Button>
+          </div>
+
+          <DashboardSection
+            icon="fe-buildings"
+            title="NON-OPERATING STATS"
+            headerClassName="mb-2.5"
+            contentClassName="mb-6"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+            <StatTile
+              title="Non-Op Payments to Process"
+              icon="fe-money-bill-gear"
+              count={1}
+              hiddenLinksTitle="The Non-Op Search role is required to view details."
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          </DashboardSection>
+
+          <DashboardSection
+            icon="fe-buildings"
+            title="OPERATING STATS"
+            headerClassName="mb-2.5"
+            contentClassName="mb-6"
           >
-            Documentation
-          </a>
+            <StatTile
+              title="Op Open Inquiries"
+              icon="fe-head-question"
+              count={2}
+              href="#"
+            />
+          </DashboardSection>
+
+          <div className="mb-6 flex flex-wrap gap-x-10.5 gap-y-6">
+            <div className="flex min-w-105 flex-1 flex-col">
+              <DashboardSection
+                icon="fe-megaphone"
+                title={<>ENVERUS NEWS &amp; EVENTS</>}
+                contentClassName="h-full"
+              >
+                <NewsList items={news} />
+              </DashboardSection>
+            </div>
+            <div className="flex min-w-105 flex-1 flex-col gap-2.5">
+              <div className="flex justify-end">
+                <OnboardingDrawer showReset />
+              </div>
+              <EduCenter />
+            </div>
+          </div>
+
+          <DashboardSection
+            icon="fe-comment-question"
+            title="ENERGYLINK CLIENT SUPPORT"
+            contentClassName="mb-6"
+          >
+            <SupportContacts />
+          </DashboardSection>
         </div>
       </main>
-    </div>
+    </>
   );
 }

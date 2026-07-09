@@ -1,26 +1,279 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --breakpoint-sm: 576px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 992px;
+  --breakpoint-xl: 1200px;
+  --breakpoint-2xl: 1501px;
+
+  --color-brand: #4d8f1e;
+  --color-brand-transparent: rgba(77, 143, 30, 0.1);
+  --color-enverus: #55bc2f;
+  --color-callout: #ff5f29;
+  --color-alternative: #58a7af;
+  --color-link: #2874d5;
+  --color-link-hover: #164b8e;
+  --color-text-emphasis: #1c1b1d;
+  --color-text-primary: #56535b;
+  --color-text-secondary: #989a9c;
+  --color-text-tertiary: #cbcdce;
+  --color-bg-primary: #fff;
+  --color-bg-secondary: #f8f8f8;
+  --color-bg-tertiary: #f0f0f0;
+  --color-border-primary: #989a9c;
+  --color-border-secondary: #cbcdce;
+  --color-border-tertiary: #e7e7e7;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@font-face {
+  font-family: "Roboto";
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url(/fonts/roboto-var.woff2) format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+    U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+    U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@font-face {
+  font-family: "Roboto";
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url(/fonts/roboto-var-ext.woff2) format("woff2");
+  unicode-range: U+2150-218F, U+2190, U+2192, U+2194-2199, U+2218-2219,
+    U+2299, U+22C4-22C6, U+2300-243F, U+2460-24FF, U+25A0-27BF, U+2921-2922,
+    U+2B00-2BFF, U+1F300-1FBFF;
+}
+
+@font-face {
+  font-family: "Font Awesome 5 Pro";
+  font-weight: 900;
+  font-style: normal;
+  font-display: block;
+  src: url(/fonts/fa-solid-900.woff2) format("woff2");
+}
+
+@font-face {
+  font-family: "Font Awesome 5 Pro";
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+  src: url(/fonts/fa-regular-400.woff2) format("woff2");
+}
+
+@font-face {
+  font-family: "Enverus Icons";
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+  src: url(/fonts/enverus-icons.woff) format("woff");
+}
+
+@layer base {
+  body {
+    background-color: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    font-family: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3 {
+    margin-top: 0;
+    margin-bottom: 5px;
+    line-height: 1.2;
+  }
+
+  a {
+    color: var(--color-link);
+    text-decoration: none;
+  }
+
+  a:hover {
+    color: var(--color-link-hover);
+  }
+
+  button {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  svg {
+    vertical-align: middle;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.fas,
+.far {
+  display: inline-block;
+  font-family: "Font Awesome 5 Pro";
+  font-style: normal;
+  font-variant: normal;
+  line-height: 1;
+  text-rendering: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.fas {
+  font-weight: 900;
+}
+
+.far {
+  font-weight: 400;
+}
+
+.fe {
+  font-family: "Enverus Icons";
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1;
+}
+
+/* Font Awesome glyph subset — keep alphabetical */
+.fa-angle-double-left:before {
+  content: "\f100";
+}
+.fa-angle-double-right:before {
+  content: "\f101";
+}
+.fa-angle-left:before {
+  content: "\f104";
+}
+.fa-angle-right:before {
+  content: "\f105";
+}
+.fa-arrow-right:before {
+  content: "\f061";
+}
+.fa-arrow-to-bottom:before {
+  content: "\f33d";
+}
+.fa-calendar:before {
+  content: "\f133";
+}
+.fa-caret-down:before {
+  content: "\f0d7";
+}
+.fa-caret-right:before {
+  content: "\f0da";
+}
+.fa-caret-up:before {
+  content: "\f0d8";
+}
+.fa-check-circle:before {
+  content: "\f058";
+}
+.fa-chevron-left:before {
+  content: "\f053";
+}
+.fa-chevron-right:before {
+  content: "\f054";
+}
+.fa-columns:before {
+  content: "\f0db";
+}
+.fa-comment:before {
+  content: "\f075";
+}
+.fa-dollar-sign:before {
+  content: "\f155";
+}
+.fa-filter:before {
+  content: "\f0b0";
+}
+.fa-hand-paper:before {
+  content: "\f256";
+}
+.fa-power-off:before {
+  content: "\f011";
+}
+.fa-question-circle:before {
+  content: "\f059";
+}
+.fa-save:before {
+  content: "\f0c7";
+}
+.fa-search:before {
+  content: "\f002";
+}
+.fa-trash-alt:before {
+  content: "\f2ed";
+}
+.fa-sort:before {
+  content: "\f0dc";
+}
+.fa-sticky-note:before {
+  content: "\f249";
+}
+.fa-sync-alt:before {
+  content: "\f2f1";
+}
+.fa-upload:before {
+  content: "\f093";
+}
+.fa-user-circle:before {
+  content: "\f2bd";
+}
+.fa-user-lock:before {
+  content: "\f502";
+}
+.fe-bell:before {
+  content: "\e9ab";
+}
+.fe-building-list:before {
+  content: "\e902";
+}
+.fe-buildings:before {
+  content: "\e903";
+}
+.fe-comment-question:before {
+  content: "\e904";
+}
+.fe-envelope:before {
+  content: "\e99c";
+}
+.fe-envelope-alt:before {
+  content: "\e905";
+}
+.fe-file-search:before {
+  content: "\e907";
+}
+.fe-folders:before {
+  content: "\e909";
+}
+.fe-head-question:before {
+  content: "\e90b";
+}
+.fe-megaphone:before {
+  content: "\e9ac";
+}
+.fe-money-bill-gear:before {
+  content: "\e900";
+}
+.fe-phone:before {
+  content: "\e901";
+}
+.fe-print:before {
+  content: "\e91e";
+}
+.fe-search:before {
+  content: "\e921";
+}
+.fe-xls:before {
+  content: "\e9a8";
 }
