@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import GlobalReset from "@/components/GlobalReset";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,6 +17,7 @@ export default function RootLayout({
         <div className="flex h-screen w-screen max-w-full flex-col">
           {children}
         </div>
+        <GlobalReset />
       </body>
     </html>
   );
