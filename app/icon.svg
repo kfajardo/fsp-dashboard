@@ -1,0 +1,9 @@
+<!-- EnergyLink "E" mark from EnergyLinkLogo.tsx, square-cropped; currentColor
+     swapped for the logo's rendered color (text-emphasis) since favicons have
+     no CSS context -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 3.2 21.5 21.5">
+  <path d="M20.8028 15.1615V12.3218H13.4346V8.81456H21.0915V5.80957H9.78906V19.2181H13.4346V15.1615H20.8028ZM13.4346 22.1223H21.4933V19.2181H13.4346V22.1223Z" fill="#1c1b1d"/>
+  <path d="M4.37061 22.0451H9.88346V19.1396H4.37061V22.0451Z" fill="#A0EF6E"/>
+  <path d="M0 15.1145H3.67777V12.209H0V15.1145Z" fill="#A0EF6E"/>
+  <path d="M6.19141 15.1145H20.8969V12.209H6.19141V15.1145Z" fill="#56BC2F"/>
+</svg>
