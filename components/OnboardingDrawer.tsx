@@ -1519,12 +1519,16 @@ type SectionKey = (typeof SECTIONS)[number]["key"];
 
 export default function OnboardingDrawer({
   wioCode,
+  storageKey: selfKey = "wio-onboarding-complete",
   open,
   onOpenChange,
   hideTrigger,
   showReset,
 }: {
   wioCode?: string;
+  // Which profile's own onboarding this is — the WIO's and the operator's
+  // dashboards must NOT share one flag (operator passes its own key).
+  storageKey?: string;
   // Controlled mode: parent owns open state (e.g. opened by the WIO's $ button).
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -1533,11 +1537,9 @@ export default function OnboardingDrawer({
   // Show the floating "Reset onboarding" overlay — Operator Dashboard only.
   showReset?: boolean;
 }) {
-  // Per-WIO pages namespace their onboarded state by code; the dashboard's own
-  // onboarding (no wioCode) keeps the original global key.
-  const storageKey = wioCode
-    ? `wio-onboarded:${wioCode}`
-    : "wio-onboarding-complete";
+  // Per-WIO pages namespace their onboarded state by code; a profile's own
+  // onboarding (no wioCode) uses that profile's key.
+  const storageKey = wioCode ? `wio-onboarded:${wioCode}` : selfKey;
   const [internalOpen, setInternalOpen] = useState(false);
   const isOpen = open ?? internalOpen;
   const setIsOpen = (v: boolean) =>

@@ -93,13 +93,14 @@ export default function OperatedInvoice({
   const [payOpen, setPayOpen] = useState(false);
   const [onboardOpen, setOnboardOpen] = useState(false);
 
-  // Same gate as NonOpSearch: WIO can pay if either the WIO itself or this
-  // invoice's operator (ZTEST-I) is onboarded — otherwise open the drawer,
-  // and a later Pay click reads the updated flag. Missing-bank cases surface
-  // inside PayModal itself (banner / notice).
+  // Same gate as NonOpSearch: WIO can pay if either the WIO itself or the
+  // operator profile is onboarded — otherwise open the drawer, and a later
+  // Pay click reads the updated flag. Missing-bank cases surface inside
+  // PayModal itself (banner / notice).
   const handlePay = () => {
     const wioOnboarded = sessionStorage.getItem("wio-onboarding-complete") === "true";
-    const operatorOnboarded = sessionStorage.getItem("wio-onboarded:ZTEST-I") === "true";
+    const operatorOnboarded =
+      sessionStorage.getItem("operator-onboarding-complete") === "true";
     if (wioOnboarded || operatorOnboarded) setPayOpen(true);
     else setOnboardOpen(true);
   };

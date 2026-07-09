@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/Button";
 import OnboardingDrawer from "@/components/OnboardingDrawer";
-import { BankAccountsTab, WIO_BANKS } from "@/components/OpSearch";
+import { BankAccountsTab } from "@/components/OpSearch";
 import {
   getPartner,
   JIB_CONTACTS,
@@ -235,7 +235,7 @@ export default function OperatedBA({
           <h4 className="mt-8 text-center text-[15px] font-bold text-[#228fb1]">
             Bank Accounts
           </h4>
-          <BankAccountsTab initial={WIO_BANKS} />
+          <BankAccountsTab profile="wio" />
         </div>
       ) : (
         <>

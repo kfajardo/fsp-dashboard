@@ -14,7 +14,6 @@ import {
   PayModal,
   STATUS_COLORS,
   Th,
-  WIO_BANKS,
   controlCls,
 } from "@/components/OpSearch";
 
@@ -114,16 +113,12 @@ function InvoiceCheckTab() {
   const markPaid = (i: number) =>
     setRows((prev) => prev.map((r, j) => (j === i ? r.map((v, k) => (k === 7 ? "Paid" : v)) : r)));
 
-  // Operator field is "!ZTEST - ZTEST-I" (JIB) or "!ZTEST-I" (REVENUE) -> "ZTEST-I"
-  const operatorCode = (operator: string) =>
-    operator.split(" - ").pop()!.replace(/^!/, "");
-
-  // WIO can pay if either the WIO itself or the invoice's operator is onboarded.
+  // WIO can pay if either the WIO itself or the operator profile is onboarded.
   // Otherwise open the WIO onboarding drawer; a later $ click reads the updated flag.
   const handlePay = (i: number) => {
     const wioOnboarded = sessionStorage.getItem("wio-onboarding-complete") === "true";
     const operatorOnboarded =
-      sessionStorage.getItem(`wio-onboarded:${operatorCode(String(rows[i][1]))}`) === "true";
+      sessionStorage.getItem("operator-onboarding-complete") === "true";
     // Missing-bank cases surface inside PayModal itself (banner / notice)
     if (wioOnboarded || operatorOnboarded) setPayRow(i);
     else setOnboardOpen(true);
@@ -432,7 +427,7 @@ export default function NonOpSearch({ initialTab = 0 }: { initialTab?: number })
       {tab === 0 ? (
         <InvoiceCheckTab />
       ) : TABS[tab] === "Bank Accounts" ? (
-        <BankAccountsTab initial={WIO_BANKS} />
+        <BankAccountsTab profile="wio" />
       ) : (
         <div className="min-h-15" />
       )}

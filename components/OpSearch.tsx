@@ -199,11 +199,14 @@ export function PayModal({
   const [partner, ptype, myBa, invoice, , acctMonth, , status, amount] = row;
   const [phase, setPhase] = useState<"review" | "paying" | "done">("review");
 
-  // ponytail: onboarding is what links a bank, so "has a default bank account"
-  // = the party's onboarding flag; every payable invoice here is ZTEST-I's.
-  // Safe to read in render — the modal only ever mounts client-side, on click.
-  const wioHasBank = sessionStorage.getItem("wio-onboarding-complete") === "true";
-  const operatorHasBank = sessionStorage.getItem("wio-onboarded:ZTEST-I") === "true";
+  // Each party's actual linked accounts (sessionStorage-backed; empty on a
+  // fresh state / after global reset). Safe to read in render — the modal
+  // only ever mounts client-side, on click.
+  const wioBanks = loadBanks("wio");
+  const wioDefault = wioBanks.rows[wioBanks.defaultIndex];
+  const opBanks = loadBanks("operator");
+  const wioHasBank = wioDefault != null;
+  const operatorHasBank = opBanks.rows[opBanks.defaultIndex] != null;
 
   const invoiceAmount = Number(amount.replace(/,/g, ""));
   // fee = min($500, max($5, invoice × 1%)); total payment = invoice + fee
@@ -326,67 +329,74 @@ export function PayModal({
           </table>
         </div>
 
-        <div className="flex items-center gap-2.25 border-t border-border-secondary p-3.75">
-          {phase === "done" ? (
-            <>
-              <span className="mr-auto">
-                <i className="fas fa-check-circle mr-1 text-brand" />
-                Payment of {total} CAD submitted
-              </span>
-              <Button variant="default" size="md" onClick={onClose}>
-                Close
-              </Button>
-            </>
-          ) : (
-            <>
-              <div className="mr-auto flex items-center gap-2">
-                {wioHasBank ? (
-                  <>
-                    <span className="whitespace-nowrap">Pay from</span>
-                    <FakeSelect
-                      // ponytail: WIO's default = first account, matching mockAccounts' "first active" rule
-                      value={`${WIO_BANKS[0][0]} ${WIO_BANKS[0][2]}`}
-                      className="min-w-60"
-                    />
-                  </>
-                ) : (
-                  <span className="rounded-sm bg-[#f2dede] px-3 py-1.5 text-[#a94442]">
-                    <i className="fas fa-exclamation-circle mr-1.5" />
-                    You need your own default bank account to pay this invoice.
-                  </span>
-                )}
-              </div>
-              <Button
-                variant="default"
-                size="md"
-                onClick={onClose}
-                disabled={phase === "paying"}
-              >
-                Cancel
-              </Button>
-              {operatorHasBank ? (
-                <Button
-                  variant="primary"
-                  size="md"
-                  onClick={pay}
-                  disabled={phase === "paying" || !wioHasBank}
-                >
-                  {phase === "paying" ? (
-                    <Spinner className="mr-2 text-[14px]" />
-                  ) : (
-                    <i className="fas fa-dollar-sign mr-2 text-[13px]" />
-                  )}
-                  Pay {total} CAD
-                </Button>
-              ) : (
-                <span className="rounded-sm bg-[#f2dede] px-3 py-1.5 text-[#a94442]">
+        <div className="border-t border-border-secondary p-3.75">
+          {phase !== "done" && (!wioHasBank || !operatorHasBank) && (
+            <div className="mb-2.5 space-y-1 rounded-sm bg-[#f2dede] px-3 py-2 text-[#a94442]">
+              {!wioHasBank && (
+                <div>
+                  <i className="fas fa-exclamation-circle mr-1.5" />
+                  You need your own default bank account to pay this invoice.
+                </div>
+              )}
+              {!operatorHasBank && (
+                <div>
                   <i className="fas fa-exclamation-circle mr-1.5" />
                   This operator does not have a default bank account to receive your
                   payment.
-                </span>
+                </div>
               )}
-            </>
+            </div>
           )}
+          <div className="flex items-center gap-2.25">
+            {phase === "done" ? (
+              <>
+                <span className="mr-auto">
+                  <i className="fas fa-check-circle mr-1 text-brand" />
+                  Payment of {total} CAD submitted
+                </span>
+                <Button variant="default" size="md" onClick={onClose}>
+                  Close
+                </Button>
+              </>
+            ) : (
+              <>
+                <div className="mr-auto flex items-center gap-2">
+                  {wioHasBank && (
+                    <>
+                      <span className="whitespace-nowrap">Pay from</span>
+                      <FakeSelect
+                        value={`${wioDefault[0]} ${wioDefault[2]}`}
+                        className="min-w-60"
+                      />
+                    </>
+                  )}
+                </div>
+                <Button
+                  variant="default"
+                  size="md"
+                  onClick={onClose}
+                  disabled={phase === "paying"}
+                >
+                  Cancel
+                </Button>
+                {operatorHasBank && (
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={pay}
+                    disabled={phase === "paying" || !wioHasBank}
+                  >
+                    {phase === "paying" ? (
+                      <Spinner className="mr-2 text-[14px]" />
+                    ) : (
+                      <i className="fas fa-dollar-sign mr-2 text-[13px]" />
+                    )}
+                    Pay {total} CAD
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -627,19 +637,23 @@ function InvoiceCheckTab() {
   );
 }
 
-// bank, type, account, status
-const BANKS = [
-  ["Chase Business Complete", "Checking", "••••4821", "Verified"],
-  ["Wells Fargo Operating", "Checking", "••••9034", "Verified"],
-  ["Frost Bank Reserve", "Savings", "••••1177", "Pending"],
-];
+// Each profile's linked accounts live in sessionStorage — fresh state has
+// none, every screen (banking tabs, PayModal) reads the same list, and the
+// global reset wipes it. Row shape: [bank, type, account, status].
+export type BankState = { rows: string[][]; defaultIndex: number };
 
-// ZTEST-DD's own linked accounts — shared by the Non-Op banking tab and the
-// owner's My Profile screen (each keeps its own in-memory copy; all mock)
-export const WIO_BANKS = [
-  ["ATB Financial Business", "Checking", "••••7302", "Verified"],
-  ["Servus Credit Union", "Savings", "••••2914", "Pending"],
-];
+export function loadBanks(profile: "operator" | "wio"): BankState {
+  try {
+    return (
+      JSON.parse(sessionStorage.getItem(`banks:${profile}`)!) ?? {
+        rows: [],
+        defaultIndex: 0,
+      }
+    );
+  } catch {
+    return { rows: [], defaultIndex: 0 };
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Mock Plaid Link modal — deliberately styled like Plaid (white card, rounded,
@@ -925,21 +939,39 @@ function ManualBankForm({ onAdd }: { onAdd: (name: string, accountNumber: string
 }
 
 // ponytail: dumb mock — nothing touches a server; timers fake the Plaid handoff
-export function BankAccountsTab({ initial = BANKS }: { initial?: string[][] }) {
+export function BankAccountsTab({ profile }: { profile: "operator" | "wio" }) {
   const [adding, setAdding] = useState<false | "options" | "manual">(false);
-  const [banks, setBanks] = useState(initial);
+  const [{ rows: banks, defaultIndex }, setState] = useState<BankState>({
+    rows: [],
+    defaultIndex: 0,
+  });
   const [plaid, setPlaid] = useState<"idle" | "loading" | "modal" | "linking">("idle");
   // in-memory only, so the glow never survives a revisit of the tab
   const [glowIndex, setGlowIndex] = useState<number | null>(null);
-  const [defaultIndex, setDefaultIndex] = useState(0);
   const [settingIndex, setSettingIndex] = useState<number | null>(null);
+
+  // sessionStorage is browser-only; hydrate after mount to keep SSR happy
+  useEffect(() => {
+    setState(loadBanks(profile));
+  }, [profile]);
+
+  // ponytail: persist inside the updater — idempotent, so StrictMode's
+  // double-invoke just writes the same JSON twice
+  const update = (fn: (s: BankState) => BankState) =>
+    setState((prev) => {
+      const next = fn(prev);
+      sessionStorage.setItem(`banks:${profile}`, JSON.stringify(next));
+      return next;
+    });
 
   // The default can't be unlinked and neither can the last row, so whatever
   // remains after an unlink always still contains the default account.
   const unlink = (i: number) => {
-    setBanks((prev) => prev.filter((_, j) => j !== i));
-    // removing a row above the default shifts it up one slot
-    if (i < defaultIndex) setDefaultIndex((d) => d - 1);
+    update((s) => ({
+      rows: s.rows.filter((_, j) => j !== i),
+      // removing a row above the default shifts it up one slot
+      defaultIndex: i < s.defaultIndex ? s.defaultIndex - 1 : s.defaultIndex,
+    }));
     setGlowIndex(null);
   };
 
@@ -947,13 +979,13 @@ export function BankAccountsTab({ initial = BANKS }: { initial?: string[][] }) {
     setSettingIndex(i);
     // ponytail: mock 3s save — swap the timeout for the real API call
     setTimeout(() => {
-      setDefaultIndex(i);
+      update((s) => ({ ...s, defaultIndex: i }));
       setSettingIndex(null);
     }, 3000);
   };
 
-  const appendBank = (row: (typeof BANKS)[number]) => {
-    setBanks((prev) => [...prev, row]);
+  const appendBank = (row: string[]) => {
+    update((s) => ({ ...s, rows: [...s.rows, row] }));
     setGlowIndex(banks.length);
     setTimeout(() => setGlowIndex(null), 2500);
   };
@@ -1035,6 +1067,16 @@ export function BankAccountsTab({ initial = BANKS }: { initial?: string[][] }) {
             </tr>
           </thead>
           <tbody>
+            {banks.length === 0 && (
+              <tr>
+                <td
+                  colSpan={6}
+                  className="border-b border-border-tertiary p-3 text-center text-text-secondary"
+                >
+                  No bank accounts linked yet.
+                </td>
+              </tr>
+            )}
             {banks.map(([bank, type, account, status], i) => (
               <tr
                 key={`${account}-${i}`}
@@ -1128,7 +1170,7 @@ export default function OpSearch({ initialTab = 0 }: { initialTab?: number }) {
 
   // sessionStorage is browser-only; read after mount to keep SSR/hydration happy
   useEffect(() => {
-    setOnboarded(sessionStorage.getItem("wio-onboarding-complete") === "true");
+    setOnboarded(sessionStorage.getItem("operator-onboarding-complete") === "true");
   }, []);
 
   const tabs = onboarded ? [...TABS, "Bank Accounts"] : TABS;
@@ -1159,7 +1201,7 @@ export default function OpSearch({ initialTab = 0 }: { initialTab?: number }) {
       {tab === 0 ? (
         <InvoiceCheckTab />
       ) : tabs[tab] === "Bank Accounts" ? (
-        <BankAccountsTab />
+        <BankAccountsTab profile="operator" />
       ) : (
         <div className="min-h-15" />
       )}
